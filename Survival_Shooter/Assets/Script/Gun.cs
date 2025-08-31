@@ -17,6 +17,9 @@ public class Gun : MonoBehaviour
     public int damage = 10;
     public LayerMask hitLayerMask = -1;
 
+    [Header("Camera Reference")]
+    public CameraController cameraController;
+
     private AudioSource audioSource;
     private float lastFireTime;
     private Coroutine trailCoroutine;
@@ -39,6 +42,12 @@ public class Gun : MonoBehaviour
             bulletTrail.enabled = false;
             bulletTrail.positionCount = 2;
         }
+
+        // LMJ: Find camera controller if not assigned
+        if (cameraController == null)
+        {
+            cameraController = Camera.main.GetComponent<CameraController>();
+        }
     }
 
     private void OnEnable()
@@ -53,7 +62,7 @@ public class Gun : MonoBehaviour
             StopCoroutine(trailCoroutine);
             trailCoroutine = null;
         }
-        
+
         if (bulletTrail != null)
         {
             bulletTrail.enabled = false;
@@ -71,9 +80,37 @@ public class Gun : MonoBehaviour
 
     private void Shoot()
     {
-        Transform shootPoint = firePosition ? firePosition : transform;
-        Vector3 startPosition = shootPoint.position;
-        Vector3 shootDirection = shootPoint.forward;
+        Vector3 startPosition;
+        Vector3 shootDirection;
+
+        // LMJ: Check camera mode
+        bool isFirstPerson = cameraController != null && cameraController.IsFirstPerson();
+
+        if (isFirstPerson)
+        {
+            // LMJ: First-person mode - shoot from active camera center
+            Camera activeCamera = cameraController.GetActiveCamera();
+            if (activeCamera != null)
+            {
+                startPosition = activeCamera.transform.position;
+                shootDirection = activeCamera.transform.forward;
+            }
+            else
+            {
+                // LMJ: Fallback
+                Transform shootPoint = firePosition ? firePosition : transform;
+                startPosition = shootPoint.position;
+                shootDirection = shootPoint.forward;
+            }
+        }
+        else
+        {
+            // LMJ: Top-down mode - use original logic
+            Transform shootPoint = firePosition ? firePosition : transform;
+            startPosition = shootPoint.position;
+            shootDirection = shootPoint.forward;
+        }
+
         Vector3 endPosition;
 
         RaycastHit hit;
@@ -92,7 +129,9 @@ public class Gun : MonoBehaviour
             endPosition = startPosition + shootDirection * fireDistance;
         }
 
-        ShowShotEffects(startPosition, endPosition);
+        // LMJ: Show effects from gun position in both modes
+        Vector3 effectStartPos = firePosition ? firePosition.position : transform.position;
+        ShowShotEffects(effectStartPos, endPosition);
     }
 
     private void ShowShotEffects(Vector3 startPos, Vector3 endPos)

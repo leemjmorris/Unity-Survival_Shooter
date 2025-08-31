@@ -12,6 +12,9 @@ public class PlayerControl : MonoBehaviour
     [Header("Gun Reference")]
     public Gun gun;
 
+    [Header("Camera Reference")]
+    public CameraController cameraController;
+
     private Rigidbody rigidBody;
     private PlayerInput playerInput;
     private Animator animator;
@@ -21,10 +24,16 @@ public class PlayerControl : MonoBehaviour
         rigidBody = GetComponent<Rigidbody>();
         playerInput = GetComponent<PlayerInput>();
         animator = GetComponent<Animator>();
-        
+
         if (gun == null)
         {
             gun = GetComponentInChildren<Gun>();
+        }
+
+        // LMJ: Find camera controller if not assigned
+        if (cameraController == null)
+        {
+            cameraController = Camera.main.GetComponent<CameraController>();
         }
     }
 
@@ -35,29 +44,52 @@ public class PlayerControl : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Vector3 mouseScreenPosition = Input.mousePosition;
-        Ray ray = Camera.main.ScreenPointToRay(mouseScreenPosition);
+        // LMJ: Check if camera controller exists and mode
+        bool isFirstPerson = cameraController != null && cameraController.IsFirstPerson();
 
-        Plane groundPlane = new Plane(Vector3.up, transform.position);
-        float rayDistance;
-
-        if (groundPlane.Raycast(ray, out rayDistance))
+        if (!isFirstPerson)
         {
-            Vector3 targetPoint = ray.GetPoint(rayDistance);
-            Vector3 direction = (targetPoint - transform.position).normalized;
+            // LMJ: Top-down mode - rotate to mouse position
+            Vector3 mouseScreenPosition = Input.mousePosition;
+            Ray ray = Camera.main.ScreenPointToRay(mouseScreenPosition);
 
-            direction.y = 0;
+            Plane groundPlane = new Plane(Vector3.up, transform.position);
+            float rayDistance;
 
-            if (direction != Vector3.zero)
+            if (groundPlane.Raycast(ray, out rayDistance))
             {
-                Quaternion lookRotation = Quaternion.LookRotation(direction);
-                rigidBody.MoveRotation(lookRotation);
+                Vector3 targetPoint = ray.GetPoint(rayDistance);
+                Vector3 direction = (targetPoint - transform.position).normalized;
+
+                direction.y = 0;
+
+                if (direction != Vector3.zero)
+                {
+                    Quaternion lookRotation = Quaternion.LookRotation(direction);
+                    rigidBody.MoveRotation(lookRotation);
+                }
             }
         }
+        // LMJ: In first-person mode, rotation is handled by CameraController
 
-        Vector3 moveDirection = new Vector3(playerInput.MoveHorizontal, 0f, playerInput.MoveVertical);
+        // LMJ: Movement works the same in both modes
+        Vector3 moveDirection;
+
+        if (isFirstPerson)
+        {
+            // LMJ: Move relative to player's rotation in first-person
+            moveDirection = transform.right * playerInput.MoveHorizontal + transform.forward * playerInput.MoveVertical;
+        }
+        else
+        {
+            // LMJ: Move in world space for top-down
+            moveDirection = new Vector3(playerInput.MoveHorizontal, 0f, playerInput.MoveVertical);
+        }
+
+        moveDirection.y = 0;
+        moveDirection.Normalize();
+
         Vector3 movement = moveDirection * moveSpeed * Time.deltaTime;
-
         rigidBody.MovePosition(rigidBody.position + movement);
 
         animator.SetFloat(hashMove, moveDirection.magnitude);
