@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI gameOverText;
     public TextMeshProUGUI finalScoreText;
     public TextMeshProUGUI waveReachedText;
+    public TextMeshProUGUI currentWaveText;
+    public TextMeshProUGUI zombieAliveText;
 
     [Header("Fade Settings")]
     public CanvasGroup gameOverCanvasGroup;
@@ -93,6 +95,9 @@ public class GameManager : MonoBehaviour
         {
             RestartGame();
         }
+
+        UpdateWaveUI();
+        UpdateZombieCountUI();
     }
 
     public void AddScore(int points)
@@ -108,6 +113,22 @@ public class GameManager : MonoBehaviour
         if (scoreText != null)
         {
             scoreText.text = $"Score: {currentScore}";
+        }
+    }
+
+    private void UpdateWaveUI()
+    {
+        if (currentWaveText != null)
+        {
+            currentWaveText.text = $"WAVE: {waveSpawner.currentWave}";
+        }
+    }
+
+    private void UpdateZombieCountUI()
+    {
+        if (zombieAliveText != null)
+        {
+            zombieAliveText.text = $"Zombie Left: {waveSpawner.enemiesAliveThisWave}";
         }
     }
 
