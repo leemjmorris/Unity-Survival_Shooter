@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ public class Gun : MonoBehaviour
 
     private AudioSource audioSource;
     private float lastFireTime;
+    private Coroutine trailCoroutine;
 
     private void Awake()
     {
@@ -42,6 +44,20 @@ public class Gun : MonoBehaviour
     private void OnEnable()
     {
         lastFireTime = 0f;
+    }
+
+    private void OnDisable()
+    {
+        if (trailCoroutine != null)
+        {
+            StopCoroutine(trailCoroutine);
+            trailCoroutine = null;
+        }
+        
+        if (bulletTrail != null)
+        {
+            bulletTrail.enabled = false;
+        }
     }
 
     public void Fire()
@@ -76,10 +92,10 @@ public class Gun : MonoBehaviour
             endPosition = startPosition + shootDirection * fireDistance;
         }
 
-        StartCoroutine(ShowShotEffects(startPosition, endPosition));
+        ShowShotEffects(startPosition, endPosition);
     }
 
-    private IEnumerator ShowShotEffects(Vector3 startPos, Vector3 endPos)
+    private void ShowShotEffects(Vector3 startPos, Vector3 endPos)
     {
         if (audioSource != null && shootClip != null)
         {
@@ -93,21 +109,28 @@ public class Gun : MonoBehaviour
 
         if (bulletTrail != null)
         {
-            bulletTrail.enabled = true;
-
-            Vector3 localStartPos = transform.InverseTransformPoint(startPos);
-            Vector3 localEndPos = transform.InverseTransformPoint(endPos);
-
-            bulletTrail.SetPosition(0, localStartPos);
-            bulletTrail.SetPosition(1, localEndPos);
-
-            yield return new WaitForSeconds(trailDuration);
-
-            bulletTrail.enabled = false;
+            if (trailCoroutine != null)
+            {
+                StopCoroutine(trailCoroutine);
+            }
+            trailCoroutine = StartCoroutine(ShowBulletTrail(startPos, endPos));
         }
-        else
-        {
-            yield return null;
-        }
+    }
+
+    private IEnumerator ShowBulletTrail(Vector3 startPos, Vector3 endPos)
+    {
+        bulletTrail.enabled = true;
+
+        Vector3 localStartPos = transform.InverseTransformPoint(startPos);
+        Vector3 localEndPos = transform.InverseTransformPoint(endPos);
+
+        bulletTrail.SetPosition(0, localStartPos);
+        bulletTrail.SetPosition(1, localEndPos);
+
+        float waitTime = Mathf.Max(trailDuration, 0.05f);
+        yield return new WaitForSeconds(trailDuration);
+
+        bulletTrail.enabled = false;
+        trailCoroutine = null;
     }
 }
