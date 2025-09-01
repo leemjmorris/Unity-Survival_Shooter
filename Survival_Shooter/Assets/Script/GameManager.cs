@@ -22,7 +22,6 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI finalScoreText;
     public TextMeshProUGUI waveReachedText;
     public TextMeshProUGUI currentWaveText;
-    public TextMeshProUGUI zombieAliveText;
 
     [Header("Fade Settings")]
     public CanvasGroup gameOverCanvasGroup;
@@ -51,6 +50,14 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        // LMJ: Play BGM (AudioClip should be set in AudioSource component in Inspector)
+        AudioSource audio = GetComponent<AudioSource>();
+        if (audio != null && audio.clip != null)
+        {
+            audio.loop = true;
+            audio.Play();
+        }
+
         // LMJ: Subscribe to player death
         if (playerHealth != null)
         {
@@ -79,6 +86,15 @@ public class GameManager : MonoBehaviour
         LoadAudioSettings();
 
         UpdateScoreUI();
+        UpdateWaveUI();
+
+        // LMJ: Subscribe to wave events
+        if (waveSpawner != null)
+        {
+            waveSpawner.onWaveStart.AddListener(OnWaveStarted);
+            waveSpawner.onWaveComplete.AddListener(OnWaveCompleted);
+        }
+
         Time.timeScale = 1f;
     }
 
@@ -95,9 +111,6 @@ public class GameManager : MonoBehaviour
         {
             RestartGame();
         }
-
-        UpdateWaveUI();
-        UpdateZombieCountUI();
     }
 
     public void AddScore(int points)
@@ -118,18 +131,20 @@ public class GameManager : MonoBehaviour
 
     private void UpdateWaveUI()
     {
-        if (currentWaveText != null)
+        if (currentWaveText != null && waveSpawner != null)
         {
             currentWaveText.text = $"WAVE: {waveSpawner.currentWave}";
         }
     }
 
-    private void UpdateZombieCountUI()
+    private void OnWaveStarted(int waveNumber)
     {
-        if (zombieAliveText != null)
-        {
-            zombieAliveText.text = $"Zombie Left: {waveSpawner.enemiesAliveThisWave}";
-        }
+        UpdateWaveUI();
+    }
+
+    private void OnWaveCompleted(int waveNumber)
+    {
+        UpdateWaveUI();
     }
 
     private void OnPlayerDeath()
